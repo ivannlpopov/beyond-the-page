@@ -1,2 +1,3 @@
-// Paste the public Cloudflare Worker URL below. NEVER paste your Groq API key.
-window.BTP_API_ENDPOINT = '';
+window.BTP_CONFIG = {
+  apiEndpoint: "https://beyond-the-page-api.ivannlpopov.workers.dev"
+};
