@@ -1,0 +1,18 @@
+/* Beyond the Page v3: responsive structured content */
+.v3-blocks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:35px 0}
+.v3-block{min-width:0;border:1px solid var(--line);border-radius:5px;background:#fafbf8;padding:26px}
+.v3-block.v3-flow,.v3-block.v3-table{grid-column:1/-1}
+.v3-heading{font-family:'Space Grotesk',sans-serif;font-size:25px;letter-spacing:-.035em;margin:0 0 15px}
+.v3-block p{font-size:15px;line-height:1.75;color:#526159;margin-bottom:12px}
+.v3-intro{font-weight:600}.v3-table-wrap{overflow-x:auto}.v3-table{border-collapse:collapse;width:100%;font-size:14px}
+.v3-table th,.v3-table td{border-bottom:1px solid var(--line);padding:14px;text-align:left;vertical-align:top;line-height:1.55}
+.v3-table th{background:#e7efdc;font-weight:700}.v3-bars{display:grid;gap:15px;margin:20px 0}
+.v3-bar-row{display:grid;grid-template-columns:minmax(80px,140px) 1fr 48px;align-items:center;gap:12px;font-size:13px}
+.v3-bar-track{height:18px;background:#e5eae1;border-radius:3px;overflow:hidden}.v3-bar-fill{height:100%;background:#8eac62}
+.v3-bar-value{text-align:right}.v3-caveat{font-size:12px!important;color:#718071!important}
+.v3-flow-list{display:flex;gap:12px;flex-wrap:wrap}.v3-flow-step{flex:1 1 150px;border-top:3px solid #9cb875;background:#f0f4e9;padding:16px;min-width:140px}
+.v3-flow-number{display:block;font-size:11px;color:#6a8852;margin-bottom:12px}.v3-flow-step strong{display:block;margin-bottom:8px}
+.v3-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.v3-mini-card{padding:17px;border:1px solid var(--line);background:white}
+.v3-mini-card h4{font-size:16px;margin:0 0 10px}.v3-question{padding:20px;border-left:3px solid #94b364;background:#f0f4e9;margin-top:22px}
+.v3-question b{display:block;font-size:12px;letter-spacing:1px;margin-bottom:10px}.v3-question p{margin:0;line-height:1.6}
+@media(max-width:800px){.v3-blocks{grid-template-columns:1fr}.v3-block.v3-flow,.v3-block.v3-table{grid-column:auto}.v3-cards{grid-template-columns:1fr}.v3-bar-row{grid-template-columns:95px 1fr 35px}}
