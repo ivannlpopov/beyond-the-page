@@ -5,6 +5,111 @@ let lang='en', knowledge=[], lastPrompt='', apiEndpoint=(window.BTP_API_ENDPOINT
 function setLang(l){lang=l;document.documentElement.lang=l;document.querySelectorAll('[data-lang]').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));document.querySelectorAll('[data-i]').forEach(e=>{const v=T[l][e.dataset.i];if(v!==undefined)e.innerHTML=v});$('prompt').placeholder=T[l].placeholder;$('modeLabel').textContent='● '+(apiEndpoint?T[l].ai:T[l].demo);if(lastPrompt&&$('result').dataset.scenario&&!$('result').dataset.ai){const sc=$('result').dataset.scenario;render(sections[sc][l],sc,false)}else if(lastPrompt&&$('result').dataset.ai){$('result').classList.add('hidden');$('result').dataset.ai='';$('result').dataset.scenario='';} }
 function classify(s){const q=s.toLowerCase();const groups={handover:/handover|asset|maintenance|equipment|commission|as.built|operation|overdracht|onderhoud|apparatuur|эксплуатац|оборудован|передач|исполнительн|цифров.*двойн/,procurement:/procure|licens|buy|pricing|price|cost|vendor|security|purchase|implement|inkoop|licentie|prijs|aanschaf|закуп|лиценз|цен[аы]|стоим|внедрен|безопасност/,engineering:/drawing|revision|design|engineering|change|contractor|brownfield|document|tekening|revisie|ontwerp|wijziging|aannemer|чертеж|редакц|верси|изменен|подрядчик|документ|модерниз/,director:/project|schedule|milestone|construction|visibility|plant|dashboard|project|planning|bouw|overzicht|строител|проект|срок|контрол|завод|отчёт/};for(const [k,r] of Object.entries(groups))if(r.test(q))return k;return 'director'}
 function render(d,scenario,isAI){const tx=T[lang];const cards=(d.cards||[]).slice(0,6).map(c=>`<article class="result-card"><span class="card-type">${escapeHTML(c[0]).toUpperCase()}</span><h3>${escapeHTML(c[1])}</h3><p>${escapeHTML(c[2])}</p><div class="sources">${escapeHTML(tx.source)}: ${(c[3]||[]).map(id=>`<span title="${escapeHTML(knowledge.find(x=>x.id===id)?.title||id)}">${escapeHTML(id)}</span>`).join(' · ')}</div></article>`).join('');$('result').innerHTML=`<div class="result-top"><span>${escapeHTML(tx.result)} / ${escapeHTML(isAI?tx.ai:tx.demo)}</span><span>VANTER / ${escapeHTML(lang.toUpperCase())}</span></div><div class="result-content"><span class="section-kicker">PERSONALIZED EXPERIENCE</span><h2>${escapeHTML(d.title)}</h2><p class="summary">${escapeHTML(d.summary)}</p><div class="result-grid">${cards}</div><div class="next-step"><b>${escapeHTML(tx.next)}</b>${escapeHTML(d.next)}</div><p class="result-note">${escapeHTML(tx.limits)}</p></div>`;$('result').dataset.scenario=scenario;$('result').dataset.ai=isAI?'1':'';$('result').classList.remove('hidden');$('result').scrollIntoView({behavior:'smooth',block:'start'})}
-async function generate(){const q=$('prompt').value.trim();if(!q){alert(T[lang].noPrompt);return}lastPrompt=q;$('loading').classList.remove('hidden');$('generate').disabled=true;const scenario=classify(q);try{if(apiEndpoint){const res=await fetch(apiEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:q,language:lang})});if(!res.ok)throw Error('API '+res.status);const json=await res.json();if(json.clarifying_question){$('result').innerHTML=`<div class="result-content"><h2>${escapeHTML(json.clarifying_question)}</h2><p>${escapeHTML(json.summary||'')}</p></div>`;$('result').classList.remove('hidden');return}if(json.page_title&&Array.isArray(json.sections)){render({title:json.page_title,summary:json.summary||'',cards:json.sections.map(s=>[s.type||'solution',s.heading||'',s.body||'',s.source_ids||[]]),next:json.recommended_next_step||''},scenario,true);return}throw Error('Invalid response')}render(sections[scenario][lang],scenario,false)}catch(e){console.warn(e);render(sections[scenario][lang],scenario,false);$('result').querySelector('.result-note').textContent=T[lang].retry+' '+T[lang].limits}finally{$('loading').classList.add('hidden');$('generate').disabled=false}}
+
+async function generate() {
+  const q = $('prompt').value.trim();
+
+  if (!q) {
+    alert(T[lang].noPrompt);
+    return;
+  }
+
+  lastPrompt = q;
+  $('loading').classList.remove('hidden');
+  $('generate').disabled = true;
+
+  const scenario = classify(q);
+
+  try {
+    if (apiEndpoint) {
+      const res = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: q, language: lang })
+      });
+
+      if (!res.ok) {
+        throw Error('API ' + res.status);
+      }
+
+      const json = await res.json();
+
+      // Always prioritize the generated page over a clarifying question.
+      if (json.page_title && Array.isArray(json.sections)) {
+        render({
+          title: json.page_title,
+          summary: json.summary || '',
+          cards: json.sections.map(s => [
+            s.type || 'solution',
+            s.heading || '',
+            s.body || '',
+            Array.isArray(s.source_ids) ? s.source_ids : []
+          ]),
+          next: json.recommended_next_step || ''
+        }, scenario, true);
+
+        // Show clarification as supplementary information.
+        if (json.clarifying_question) {
+          const question = document.createElement('div');
+          question.className = 'next-step';
+
+          const heading = document.createElement('b');
+          heading.textContent = {
+            en: 'TO MAKE THIS MORE RELEVANT',
+            nl: 'OM DIT RELEVANTER TE MAKEN',
+            ru: 'ЧТО МОЖНО УТОЧНИТЬ'
+          }[lang];
+
+          question.appendChild(heading);
+          question.appendChild(
+            document.createTextNode(json.clarifying_question)
+          );
+
+          const note = $('result').querySelector('.result-note');
+          note.before(question);
+        }
+
+        return;
+      }
+
+      // Only show a standalone question if no page was generated.
+      if (json.clarifying_question) {
+        $('result').innerHTML =
+          '<div class="result-content"><h2>' +
+          escapeHTML(json.clarifying_question) +
+          '</h2><p>' +
+          escapeHTML(json.summary || '') +
+          '</p></div>';
+
+        $('result').dataset.ai = '1';
+        $('result').dataset.scenario = scenario;
+        $('result').classList.remove('hidden');
+        $('result').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+        return;
+      }
+
+      throw Error('Invalid AI response');
+    }
+
+    render(sections[scenario][lang], scenario, false);
+
+  } catch (e) {
+    console.warn('Beyond the Page:', e);
+
+    render(sections[scenario][lang], scenario, false);
+
+    const note = $('result').querySelector('.result-note');
+    if (note) {
+      note.textContent = T[lang].retry + ' ' + T[lang].limits;
+    }
+
+  } finally {
+    $('loading').classList.add('hidden');
+    $('generate').disabled = false;
+  }
+}
 document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));document.querySelectorAll('[data-scenario]').forEach(b=>b.addEventListener('click',()=>{$('prompt').value=examples[b.dataset.scenario][lang];generate()}));$('generate').addEventListener('click',generate);$('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))generate()});fetch('data/knowledge.json').then(r=>r.json()).then(x=>knowledge=x).catch(()=>{});setLang('en');
 // Configure the Groq Cloudflare Worker URL in config.js (window.BTP_API_ENDPOINT).
